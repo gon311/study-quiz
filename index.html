@@ -158,6 +158,14 @@ label{font-size:.78rem;font-weight:600;color:var(--ink-soft);display:block;margi
   border-radius:6px;padding:8px 12px;margin-top:8px;white-space:pre-wrap;
 }
 .q-foot{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
+.pager{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  margin-top:18px;padding-top:16px;border-top:1px dashed var(--omr-line);
+}
+.pager-info{font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--ink-soft);text-align:center}
+.pager-range{display:block;font-size:.7rem;margin-top:2px}
+.btn:disabled{opacity:.4;cursor:default}
+.btn:disabled:hover{background:var(--card)}
 
 /* OMR */
 .omr-sheet{max-width:640px;margin:0 auto}
@@ -487,6 +495,8 @@ let calYear, calMonth;
 let quizSubjectSel = "전체";
 let quizCountSel = 10;
 let bankFilterSel = "전체";
+let bankPage = 1;
+const BANK_PAGE_SIZE = 10;
 let quiz = null;
 let bulkParsed = null;
 
@@ -707,15 +717,15 @@ function renderLegend(){
 /* ==================== CBT ==================== */
 function buildSubjectChips(){
   const all = ["전체", ...SUBJECTS];
-  const mk = (containerId, getSel, setSel) => {
+  const mk = (containerId, getSel, setSel, onChange) => {
     const el = document.getElementById(containerId);
     el.innerHTML = all.map(s=>`<button class="chip${getSel()===s?' on':''}" data-s="${s}">${s}</button>`).join('');
     el.querySelectorAll('.chip').forEach(b=>{
-      b.onclick = ()=>{ setSel(b.dataset.s); buildSubjectChips(); renderBank(); };
+      b.onclick = ()=>{ setSel(b.dataset.s); if(onChange) onChange(); buildSubjectChips(); renderBank(); };
     });
   };
   mk('quizSubjects', ()=>quizSubjectSel, v=>quizSubjectSel=v);
-  mk('bankFilter', ()=>bankFilterSel, v=>bankFilterSel=v);
+  mk('bankFilter', ()=>bankFilterSel, v=>bankFilterSel=v, ()=>{ bankPage = 1; });
   renderQuizCountChips();
   const sel = document.getElementById('qSubject');
   if(!sel.options.length) sel.innerHTML = SUBJECTS.map(s=>`<option>${s}</option>`).join('');
@@ -746,7 +756,14 @@ function renderBank(){
   document.getElementById('qCount').textContent = `(${questions.length}문제)`;
   const el = document.getElementById('qList');
   if(!list.length){ el.innerHTML = `<div class="empty-msg">해당 과목의 문제가 아직 없어요.</div>`; return; }
-  el.innerHTML = list.map(q=>`
+
+  const totalPages = Math.max(1, Math.ceil(list.length / BANK_PAGE_SIZE));
+  if(bankPage > totalPages) bankPage = totalPages;
+  if(bankPage < 1) bankPage = 1;
+  const startIdx = (bankPage - 1) * BANK_PAGE_SIZE;
+  const pageList = list.slice(startIdx, startIdx + BANK_PAGE_SIZE);
+
+  const itemsHtml = pageList.map(q=>`
     <div class="q-item">
       <div class="q-meta"><span class="badge">${esc(q.subject)}</span><span class="badge">출제: ${esc(q.author||'-')}</span></div>
       <div class="q-text">${esc(q.text)}</div>
@@ -756,6 +773,21 @@ function renderBank(){
       ${q.expl ? `<div class="q-expl">${esc(q.expl)}</div>` : ''}
       <div class="q-foot"><button class="btn small danger" data-del="${q.id}">삭제</button></div>
     </div>`).join('');
+
+  const pagerHtml = totalPages > 1 ? `
+    <div class="pager">
+      <button class="btn small" id="bankPrev" ${bankPage<=1?'disabled':''}>&#8592; 이전</button>
+      <span class="pager-info">${bankPage} / ${totalPages} 페이지 <span class="pager-range">(${startIdx+1}-${Math.min(startIdx+BANK_PAGE_SIZE, list.length)} / ${list.length}문제)</span></span>
+      <button class="btn small" id="bankNext" ${bankPage>=totalPages?'disabled':''}>다음 &#8594;</button>
+    </div>` : '';
+
+  el.innerHTML = itemsHtml + pagerHtml;
+
+  if(totalPages > 1){
+    document.getElementById('bankPrev').onclick = ()=>{ bankPage--; renderBank(); el.scrollIntoView({behavior:'smooth', block:'start'}); };
+    document.getElementById('bankNext').onclick = ()=>{ bankPage++; renderBank(); el.scrollIntoView({behavior:'smooth', block:'start'}); };
+  }
+
   el.querySelectorAll('[data-del]').forEach(b=>{
     b.onclick = async ()=>{
       if(!confirm("이 문제를 삭제할까요?")) return;
