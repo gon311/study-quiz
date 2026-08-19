@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>정보처리기사 스터디</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
+<style>
+:root{
+  --paper:#FBFCF9;
+  --omr-line:#D8E7DD;
+  --omr-mint:#EAF3ED;
+  --ink:#1C2B33;
+  --ink-soft:#5A6B72;
+  --red-pen:#CE4536;
+  --green-ok:#2E7D5B;
+  --card:#FFFFFF;
+  --radius:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:16px}
+body{
+  font-family:'IBM Plex Sans KR',-apple-system,'Malgun Gothic',sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+  line-height:1.6;
+  background-image:repeating-linear-gradient(to bottom, transparent 0 31px, rgba(216,231,221,.45) 31px 32px);
+}
+.mono{font-family:'IBM Plex Mono',monospace}
+
+header{
+  border-bottom:2px solid var(--ink);
+  background:var(--card);
+  position:sticky;top:0;z-index:50;
+}
+.header-inner{
+  max-width:1000px;margin:0 auto;padding:14px 20px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.logo{display:flex;align-items:baseline;gap:10px}
+.logo h1{font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
+.logo .sub{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--ink-soft);letter-spacing:.08em}
+.dday{
+  margin-left:auto;display:flex;align-items:center;gap:8px;
+  font-family:'IBM Plex Mono',monospace;font-size:.85rem;
+  border:1.5px solid var(--ink);border-radius:999px;padding:4px 14px;
+  cursor:pointer;background:var(--card);
+}
+.dday b{color:var(--red-pen);font-size:1rem}
+.me-chip{
+  display:flex;align-items:center;gap:7px;font-size:.85rem;font-weight:600;
+  padding:4px 12px;border-radius:999px;background:var(--omr-mint);
+  border:1px solid var(--omr-line);cursor:pointer;
+}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex:none}
+
+nav{max-width:1000px;margin:0 auto;padding:0 20px;display:flex;gap:0;background:transparent}
+.tab{
+  font-family:'IBM Plex Mono',monospace;font-size:.82rem;font-weight:500;
+  padding:12px 18px;border:none;background:none;cursor:pointer;color:var(--ink-soft);
+  border-bottom:2.5px solid transparent;letter-spacing:.02em;
+}
+.tab.active{color:var(--ink);border-bottom-color:var(--red-pen);font-weight:600}
+.tab:focus-visible{outline:2px solid var(--red-pen);outline-offset:-2px}
+
+main{max-width:1000px;margin:0 auto;padding:24px 20px 80px}
+.panel{display:none}
+.panel.active{display:block}
+
+.card{
+  background:var(--card);border:1.5px solid var(--ink);border-radius:var(--radius);
+  padding:20px;margin-bottom:18px;
+  box-shadow:3px 3px 0 var(--omr-line);
+}
+h2{font-size:1.05rem;font-weight:700;margin-bottom:4px}
+.desc{font-size:.82rem;color:var(--ink-soft);margin-bottom:14px}
+
+button{font-family:inherit}
+.btn{
+  padding:8px 16px;border-radius:8px;border:1.5px solid var(--ink);
+  background:var(--card);color:var(--ink);font-size:.85rem;font-weight:600;cursor:pointer;
+  transition:transform .08s;
+}
+.btn:hover{background:var(--omr-mint)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:hover{background:#2e434e}
+.btn.danger{border-color:var(--red-pen);color:var(--red-pen)}
+.btn.small{padding:4px 10px;font-size:.75rem}
+input[type=text],input[type=date],textarea,select{
+  font-family:inherit;font-size:.9rem;padding:9px 12px;
+  border:1.5px solid var(--omr-line);border-radius:8px;background:#fff;color:var(--ink);
+  width:100%;
+}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--ink)}
+textarea{resize:vertical;min-height:80px}
+label{font-size:.78rem;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:4px}
+.field{margin-bottom:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>*{flex:1;min-width:140px}
+
+/* 캘린더 */
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cal-title{font-family:'IBM Plex Mono',monospace;font-size:1.1rem;font-weight:600}
+.cal-nav{display:flex;gap:6px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal-dow{
+  text-align:center;font-family:'IBM Plex Mono',monospace;font-size:.7rem;
+  color:var(--ink-soft);padding:4px 0;font-weight:600;
+}
+.cal-dow.sun{color:var(--red-pen)}
+.cal-cell{
+  min-height:74px;border:1px solid var(--omr-line);border-radius:8px;
+  padding:5px 6px;background:#fff;cursor:pointer;position:relative;
+  transition:border-color .1s;
+}
+.cal-cell:hover{border-color:var(--ink)}
+.cal-cell.empty{background:transparent;border:none;cursor:default}
+.cal-cell.today{border:2px solid var(--red-pen)}
+.cal-cell .dnum{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--ink-soft)}
+.cal-cell.today .dnum{color:var(--red-pen);font-weight:700}
+.cal-cell.sun .dnum{color:var(--red-pen)}
+.stamps{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+.stamp{
+  width:14px;height:14px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+.stamp.mine{outline:2px solid var(--ink);outline-offset:1px}
+.cal-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;padding-top:14px;border-top:1px dashed var(--omr-line)}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.8rem}
+.legend-item .cnt{font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);font-size:.75rem}
+
+/* CBT */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.chip{
+  font-size:.78rem;padding:5px 12px;border-radius:999px;border:1.5px solid var(--omr-line);
+  background:#fff;cursor:pointer;font-weight:500;
+}
+.chip.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.q-item{
+  border:1px solid var(--omr-line);border-radius:8px;padding:14px 16px;margin-bottom:10px;background:#fff;
+}
+.q-meta{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.badge{
+  font-family:'IBM Plex Mono',monospace;font-size:.68rem;padding:2px 8px;border-radius:4px;
+  background:var(--omr-mint);border:1px solid var(--omr-line);color:var(--ink-soft);
+}
+.q-text{font-weight:600;font-size:.92rem;white-space:pre-wrap}
+.q-choices{margin:8px 0 4px;font-size:.87rem}
+.q-choices li{list-style:none;padding:2px 0;display:flex;gap:8px}
+.q-choices .num{font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);flex:none}
+.q-choices li.answer .num,.q-choices li.answer{color:var(--green-ok);font-weight:600}
+.q-expl{
+  font-size:.82rem;color:var(--ink-soft);background:var(--omr-mint);
+  border-radius:6px;padding:8px 12px;margin-top:8px;white-space:pre-wrap;
+}
+.q-foot{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
+
+/* OMR */
+.omr-sheet{max-width:640px;margin:0 auto}
+.omr-progress{
+  font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--ink-soft);
+  display:flex;justify-content:space-between;margin-bottom:12px;
+}
+.omr-q{font-size:1rem;font-weight:600;margin-bottom:18px;white-space:pre-wrap;line-height:1.7}
+.omr-opt{
+  display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;
+  padding:12px 14px;margin-bottom:8px;border:1.5px solid var(--omr-line);
+  border-radius:8px;background:#fff;cursor:pointer;font-size:.92rem;line-height:1.5;
+}
+.omr-opt:hover:not(:disabled){border-color:var(--ink)}
+.omr-opt:disabled{cursor:default}
+.bubble{
+  font-family:'IBM Plex Mono',monospace;flex:none;width:26px;height:26px;border-radius:50%;
+  border:1.5px solid var(--ink-soft);display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;font-weight:600;color:var(--ink-soft);margin-top:1px;
+}
+.omr-opt.picked .bubble{background:var(--ink);border-color:var(--ink);color:#fff}
+.omr-opt.correct{border-color:var(--green-ok);background:#F0F8F3}
+.omr-opt.correct .bubble{background:var(--green-ok);border-color:var(--green-ok);color:#fff}
+.omr-opt.wrong{border-color:var(--red-pen);background:#FBF0EE}
+.omr-opt.wrong .bubble{background:var(--red-pen);border-color:var(--red-pen);color:#fff}
+.omr-result{text-align:center;padding:30px 0}
+.omr-score{font-family:'IBM Plex Mono',monospace;font-size:2.6rem;font-weight:600}
+.omr-score .total{font-size:1.2rem;color:var(--ink-soft)}
+
+/* 메모 */
+.memo-item{
+  border:1px solid var(--omr-line);border-radius:8px;background:#fff;
+  padding:14px 16px;margin-bottom:12px;
+}
+.memo-item.solved{opacity:.65;background:var(--omr-mint)}
+.memo-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.memo-author{font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:6px}
+.memo-time{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--ink-soft)}
+.memo-body{font-size:.9rem;white-space:pre-wrap}
+.memo-actions{display:flex;gap:6px;margin-left:auto}
+.replies{margin-top:10px;border-top:1px dashed var(--omr-line);padding-top:10px}
+.reply{
+  font-size:.84rem;padding:6px 0;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;
+}
+.reply .who{font-weight:600;flex:none;display:flex;align-items:center;gap:5px}
+.reply-form{display:flex;gap:8px;margin-top:8px}
+.reply-form input{flex:1}
+.solved-badge{
+  font-size:.68rem;font-family:'IBM Plex Mono',monospace;color:var(--green-ok);
+  border:1px solid var(--green-ok);border-radius:4px;padding:1px 7px;font-weight:600;
+}
+
+/* 모달 */
+.modal-bg{
+  position:fixed;inset:0;background:rgba(28,43,51,.45);z-index:100;
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.modal-bg.show{display:flex}
+.modal{
+  background:var(--card);border:2px solid var(--ink);border-radius:12px;
+  padding:26px;max-width:420px;width:100%;box-shadow:6px 6px 0 var(--omr-line);
+  max-height:90vh;overflow-y:auto;
+}
+.modal h3{font-size:1.05rem;margin-bottom:6px}
+.modal .desc{margin-bottom:16px}
+.color-pick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.color-opt{
+  width:32px;height:32px;border-radius:50%;cursor:pointer;border:2px solid transparent;
+}
+.color-opt.on{border-color:var(--ink);outline:2px solid var(--ink);outline-offset:2px}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+
+.empty-msg{
+  text-align:center;color:var(--ink-soft);font-size:.85rem;padding:30px 0;
+  border:1.5px dashed var(--omr-line);border-radius:8px;
+}
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:#fff;font-size:.83rem;padding:10px 20px;border-radius:999px;
+  z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;
+}
+.toast.show{opacity:1}
+.loading{text-align:center;color:var(--ink-soft);padding:20px}
+.loading::after{content:'...';animation:dots 1.5s steps(4, end) infinite}
+@keyframes dots{0%,20%{content:''} 40%{content:'.'} 60%{content:'..'} 80%,100%{content:'...'}}
+
+@media (max-width:640px){
+  .cal-cell{min-height:56px;padding:3px 4px}
+  .stamp{width:10px;height:10px}
+  .header-inner{gap:10px}
+  .logo .sub{display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <h1>정보처리기사 스터디</h1>
+      <span class="sub">ENGINEER INFORMATION PROCESSING</span>
+    </div>
+    <button class="dday" id="ddayBtn" title="시험일 설정">시험까지 <b id="ddayNum">D-?</b></button>
+    <button class="me-chip" id="meChip" title="내 프로필 변경">
+      <span class="dot" id="meDot" style="background:#ccc"></span>
+      <span id="meName">이름 설정</span>
+    </button>
+  </div>
+  <nav>
+    <button class="tab active" data-tab="cal">01 출석 캘린더</button>
+    <button class="tab" data-tab="cbt">02 CBT 문제은행</button>
+    <button class="tab" data-tab="memo">03 스터디 메모</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 출석 캘린더 -->
+  <section class="panel active" id="panel-cal">
+    <div class="card">
+      <div class="cal-head">
+        <div class="cal-title" id="calTitle">2026.08</div>
+        <div class="cal-nav">
+          <button class="btn small" id="calPrev">&#8592;</button>
+          <button class="btn small" id="calToday">오늘</button>
+          <button class="btn small" id="calNext">&#8594;</button>
+        </div>
+      </div>
+      <p class="desc">공부한 날짜를 누르면 내 도장이 찍혀요. 다시 누르면 취소됩니다.</p>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend" id="calLegend"></div>
+    </div>
+  </section>
+
+  <!-- CBT -->
+  <section class="panel" id="panel-cbt">
+    <div class="card">
+      <h2>문제 풀기</h2>
+      <p class="desc">과목을 선택하고 OMR 마킹하듯 풀어보세요. 바로 채점됩니다.</p>
+      <div class="filter-bar" id="quizSubjects"></div>
+      <button class="btn primary" id="startQuiz">풀이 시작</button>
+    </div>
+
+    <div class="card" id="quizCard" style="display:none">
+      <div class="omr-sheet" id="omrSheet"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <h2>문제은행 <span class="mono" id="qCount" style="font-size:.8rem;color:var(--ink-soft)"></span></h2>
+          <p class="desc" style="margin-bottom:0">팀원 누구나 문제를 추가할 수 있어요.</p>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn" id="addQBtn">+ 문제 추가</button>
+          <button class="btn primary" id="bulkQBtn">&#128203; 일괄 추가</button>
+        </div>
+      </div>
+      <div class="filter-bar" id="bankFilter" style="margin-top:12px"></div>
+      <div id="qList"></div>
+    </div>
+  </section>
+
+  <!-- 메모 -->
+  <section class="panel" id="panel-memo">
+    <div class="card">
+      <h2>새 메모</h2>
+      <p class="desc">공부하다 궁금한 것, 헷갈리는 개념을 적어두면 팀원이 답글을 달 수 있어요.</p>
+      <div class="field">
+        <textarea id="memoInput" placeholder="예) 2NF와 3NF 차이가 뭔지 헷갈려요."></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end">
+        <button class="btn primary" id="memoAdd">메모 남기기</button>
+      </div>
+    </div>
+    <div id="memoList"></div>
+  </section>
+</main>
+
+<!-- 프로필 모달 -->
+<div class="modal-bg" id="profileModal">
+  <div class="modal">
+    <h3>프로필 설정</h3>
+    <p class="desc">이름과 도장 색을 정하면 팀원들에게 보여요.</p>
+    <div class="field">
+      <label for="nameInput">이름</label>
+      <input type="text" id="nameInput" maxlength="10" placeholder="예) 지민">
+    </div>
+    <label>도장 색</label>
+    <div class="color-pick" id="colorPick"></div>
+    <div class="modal-foot">
+      <button class="btn primary" id="profileSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 시험일 모달 -->
+<div class="modal-bg" id="ddayModal">
+  <div class="modal">
+    <h3>시험일 설정</h3>
+    <p class="desc">필기/실기 시험일을 입력하면 D-day가 표시돼요. (팀 전체 공유)</p>
+    <div class="field">
+      <label for="examDateInput">시험일</label>
+      <input type="date" id="examDateInput">
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('ddayModal')">취소</button>
+      <button class="btn primary" id="ddaySave">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 문제 추가 모달 -->
+<div class="modal-bg" id="qModal">
+  <div class="modal" style="max-width:560px">
+    <h3>문제 추가</h3>
+    <div class="field">
+      <label for="qSubject">과목</label>
+      <select id="qSubject"></select>
+    </div>
+    <div class="field">
+      <label for="qText">문제</label>
+      <textarea id="qText" placeholder="문제를 입력하세요"></textarea>
+    </div>
+    <div class="row">
+      <div class="field"><label>보기 ①</label><input type="text" id="qc0"></div>
+      <div class="field"><label>보기 ②</label><input type="text" id="qc1"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>보기 ③</label><input type="text" id="qc2"></div>
+      <div class="field"><label>보기 ④</label><input type="text" id="qc3"></div>
+    </div>
+    <div class="field">
+      <label for="qAnswer">정답</label>
+      <select id="qAnswer">
+        <option value="0">①</option><option value="1">②</option>
+        <option value="2">③</option><option value="3">④</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="qExpl">해설 (선택)</label>
+      <textarea id="qExpl" style="min-height:60px"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('qModal')">취소</button>
+      <button class="btn primary" id="qSave">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 일괄 추가 모달 -->
+<div class="modal-bg" id="bulkModal">
+  <div class="modal" style="max-width:680px">
+    <h3>문제 일괄 추가</h3>
+    <p class="desc">아래 양식으로 여러 문제를 한 번에 붙여넣으세요. 문제 사이는 <b>---</b> 줄로 구분합니다.</p>
+    <details style="margin-bottom:12px">
+      <summary style="font-size:.8rem;font-weight:600;cursor:pointer;color:var(--ink-soft)">양식 예시 보기 (클릭)</summary>
+      <pre class="mono" style="font-size:.72rem;background:var(--omr-mint);border-radius:8px;padding:12px;margin-top:8px;overflow-x:auto;line-height:1.7">과목: 데이터베이스 구축
+문제: SQL 명령어 중 DML에 해당하지 않는 것은?
+1. SELECT
+2. INSERT
+3. UPDATE
+4. CREATE
+정답: 4
+해설: CREATE는 DDL입니다.
+---
+과목: 소프트웨어 설계
+문제: 다음 중 GoF 디자인 패턴에서
+생성 패턴에 해당하는 것은?
+① 싱글톤
+② 어댑터
+③ 옵저버
+④ 데코레이터
+정답: 1
+---</pre>
+    </details>
+    <div class="field">
+      <textarea id="bulkInput" style="min-height:260px;font-family:'IBM Plex Mono',monospace;font-size:.8rem" placeholder="여기에 양식대로 붙여넣기..."></textarea>
+    </div>
+    <div id="bulkPreview" style="font-size:.8rem;margin-bottom:10px"></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('bulkModal')">취소</button>
+      <button class="btn" id="bulkCheck">검사하기</button>
+      <button class="btn primary" id="bulkSave" disabled>등록</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==================== Firebase 초기화 ==================== */
+// 여기에 Firebase 설정을 넣습니다 (아래에서 제공)
+const firebaseConfig = {
+  apiKey: "AIzaSyCORUJmWtu0J793VL9Up0Pf2mGO77P2u-o",
+  authDomain: "study-quiz-7558e.firebaseapp.com",
+  databaseURL: "https://study-quiz-7558e-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "study-quiz-7558e",
+  storageBucket: "study-quiz-7558e.firebasestorage.app",
+  messagingSenderId: "497833803076",
+  appId: "1:497833803076:web:b5ecd2c075a16b4ce16b11"
+};
+
+let db = null;
+let isFirebaseReady = false;
+
+firebase.initializeApp(firebaseConfig);
+db = firebase.database();
+isFirebaseReady = true;
+
+console.log('Firebase 연결됨');
+
+/* ==================== 상수 & 상태 ==================== */
+const SUBJECTS = ["소프트웨어 설계","소프트웨어 개발","데이터베이스 구축","프로그래밍 언어 활용","정보시스템 구축관리"];
+const COLORS = ["#CE4536","#2E7D5B","#2C6E9E","#C98A1B","#7A4FB0","#C25583","#3A9E9B","#5B6B2E"];
+const CIRCLED = ["\u2460","\u2461","\u2462","\u2463"];
+
+let me = null;
+let members = {};
+let attendance = {};
+let questions = [];
+let memos = [];
+let settings = {};
+let calYear, calMonth;
+let quizSubjectSel = "전체";
+let bankFilterSel = "전체";
+let quiz = null;
+let bulkParsed = null;
+
+/* ==================== Firebase 유틸 ==================== */
+async function dbSet(path, val){
+  if(!isFirebaseReady) return false;
+  try{
+    await db.ref(path).set(val);
+    return true;
+  }catch(e){ toast("저장 실패: " + e.message); return false; }
+}
+
+async function dbGet(path){
+  if(!isFirebaseReady) return null;
+  try{
+    const snap = await db.ref(path).once('value');
+    return snap.val();
+  }catch(e){ console.error(e); return null; }
+}
+
+/* ==================== UI 유틸 ==================== */
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmtTime(ts){
+  const d = new Date(ts);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+
+/* ==================== 시드 문제 ==================== */
+const SEED_QUESTIONS = [
+ {subject:SUBJECTS[0], text:"UML 다이어그램 중 시스템의 정적 구조와 클래스 간의 관계를 표현하는 것은?", choices:["클래스 다이어그램","시퀀스 다이어그램","액티비티 다이어그램","커뮤니케이션 다이어그램"], answer:0, expl:"클래스 다이어그램은 구조(정적) 다이어그램, 시퀀스·액티비티·커뮤니케이션은 행위(동적) 다이어그램입니다."},
+ {subject:SUBJECTS[0], text:"요구사항 중 비기능적(Non-functional) 요구사항에 해당하는 것은?", choices:["회원 가입 기능","상품 검색 기능","응답 시간 3초 이내 보장","주문 취소 기능"], answer:2, expl:"성능, 보안, 가용성 등 품질에 대한 요구는 비기능적 요구사항입니다."},
+];
+
+/* ==================== 초기화 ==================== */
+async function init(){
+  const today = new Date();
+  calYear = today.getFullYear(); calMonth = today.getMonth();
+
+  // Firebase에서 데이터 로드
+  const [prof, mems, att, qs, ms, st] = await Promise.all([
+    dbGet('profile'),
+    dbGet('members'),
+    dbGet('attendance'),
+    dbGet('questions'),
+    dbGet('memos'),
+    dbGet('settings')
+  ]);
+
+  me = prof; 
+  members = mems || {}; 
+  attendance = att || {}; 
+  memos = ms || [];
+  settings = st || {};
+
+  if(!qs){
+    questions = SEED_QUESTIONS.map(q => ({...q, id: uid(), author: "기본 제공"}));
+    await dbSet('questions', questions);
+  } else questions = qs;
+
+  buildColorPick(); buildSubjectChips();
+  renderAll();
+
+  if(!me) openModal('profileModal');
+
+  // 실시간 업데이트 리스너
+  db.ref('questions').on('value', (snap)=>{ 
+    questions = snap.val() || SEED_QUESTIONS; 
+    renderBank(); 
+  });
+  db.ref('memos').on('value', (snap)=>{ 
+    memos = snap.val() || []; 
+    renderMemos(); 
+  });
+  db.ref('members').on('value', (snap)=>{ 
+    members = snap.val() || {}; 
+    renderCalendar(); 
+  });
+  db.ref('attendance').on('value', (snap)=>{ 
+    attendance = snap.val() || {}; 
+    renderCalendar(); 
+  });
+}
+
+function renderAll(){ renderMe(); renderDday(); renderCalendar(); renderBank(); renderMemos(); }
+
+/* ==================== 프로필 ==================== */
+let pickedColor = COLORS[0];
+function buildColorPick(){
+  const wrap = document.getElementById('colorPick');
+  wrap.innerHTML = COLORS.map(c =>
+    `<button class="color-opt" style="background:${c}" data-c="${c}" aria-label="색상 ${c}"></button>`).join('');
+  wrap.querySelectorAll('.color-opt').forEach(b=>{
+    b.onclick = ()=>{ pickedColor = b.dataset.c; wrap.querySelectorAll('.color-opt').forEach(x=>x.classList.toggle('on', x===b)); };
+  });
+  wrap.firstElementChild.classList.add('on');
+}
+
+document.getElementById('profileSave').onclick = async ()=>{
+  const name = document.getElementById('nameInput').value.trim();
+  if(!name){ toast("이름을 입력해 주세요."); return; }
+  me = {name, color: pickedColor};
+  await dbSet('profile', me);
+  const mems = await dbGet('members') || {};
+  mems[name] = {color: pickedColor};
+  await dbSet('members', mems);
+  closeModal('profileModal');
+  renderAll();
+  toast(`${name}님, 환영해요!`);
+};
+
+document.getElementById('meChip').onclick = ()=>{
+  if(me){
+    document.getElementById('nameInput').value = me.name;
+    pickedColor = me.color;
+    document.querySelectorAll('#colorPick .color-opt').forEach(x=>x.classList.toggle('on', x.dataset.c===me.color));
+  }
+  openModal('profileModal');
+};
+
+function renderMe(){
+  if(me){
+    document.getElementById('meName').textContent = me.name;
+    document.getElementById('meDot').style.background = me.color;
+  }
+}
+
+/* ==================== D-day ==================== */
+document.getElementById('ddayBtn').onclick = ()=>{
+  document.getElementById('examDateInput').value = settings.examDate || '';
+  openModal('ddayModal');
+};
+
+document.getElementById('ddaySave').onclick = async ()=>{
+  const v = document.getElementById('examDateInput').value;
+  if(!v){ toast("날짜를 선택해 주세요."); return; }
+  settings.examDate = v;
+  await dbSet('settings', settings);
+  closeModal('ddayModal'); renderDday();
+};
+
+function renderDday(){
+  const el = document.getElementById('ddayNum');
+  if(!settings.examDate){ el.textContent = "D-?"; return; }
+  const now = new Date(); now.setHours(0,0,0,0);
+  const exam = new Date(settings.examDate + "T00:00:00");
+  const diff = Math.round((exam - now) / 86400000);
+  el.textContent = diff > 0 ? `D-${diff}` : diff === 0 ? "D-DAY" : `D+${-diff}`;
+}
+
+/* ==================== 캘린더 ==================== */
+document.getElementById('calPrev').onclick = ()=>{ calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); };
+document.getElementById('calNext').onclick = ()=>{ calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); };
+document.getElementById('calToday').onclick = ()=>{ const t=new Date(); calYear=t.getFullYear(); calMonth=t.getMonth(); renderCalendar(); };
+
+function dateKey(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+
+function renderCalendar(){
+  document.getElementById('calTitle').textContent = `${calYear}.${String(calMonth+1).padStart(2,'0')}`;
+  const grid = document.getElementById('calGrid');
+  const dows = ["일","월","화","수","목","금","토"];
+  let html = dows.map((d,i)=>`<div class="cal-dow${i===0?' sun':''}">${d}</div>`).join('');
+
+  const first = new Date(calYear, calMonth, 1).getDay();
+  const days = new Date(calYear, calMonth+1, 0).getDate();
+  const t = new Date();
+  const isThisMonth = t.getFullYear()===calYear && t.getMonth()===calMonth;
+
+  for(let i=0;i<first;i++) html += `<div class="cal-cell empty"></div>`;
+  for(let d=1; d<=days; d++){
+    const key = dateKey(calYear, calMonth, d);
+    const names = attendance[key] || [];
+    const dow = (first + d - 1) % 7;
+    const stamps = names.map(n=>{
+      const c = (members[n]&&members[n].color) || "#999";
+      const mine = me && n===me.name ? " mine" : "";
+      return `<span class="stamp${mine}" style="background:${c}" title="${esc(n)}"></span>`;
+    }).join('');
+    html += `<button class="cal-cell${isThisMonth&&t.getDate()===d?' today':''}${dow===0?' sun':''}" data-key="${key}" aria-label="${key} 출석 체크">
+      <span class="dnum">${d}</span><span class="stamps">${stamps}</span></button>`;
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll('.cal-cell[data-key]').forEach(cell=>{
+    cell.onclick = ()=>toggleAttend(cell.dataset.key);
+  });
+  renderLegend();
+}
+
+async function toggleAttend(key){
+  if(!me){ openModal('profileModal'); return; }
+  let att = await dbGet('attendance') || {};
+  const list = att[key] || [];
+  const i = list.indexOf(me.name);
+  if(i >= 0) list.splice(i,1); else list.push(me.name);
+  if(list.length) att[key] = list; else delete att[key];
+  await dbSet('attendance', att);
+}
+
+function renderLegend(){
+  const prefix = `${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+  const counts = {};
+  Object.keys(attendance).forEach(k=>{
+    if(k.startsWith(prefix)) attendance[k].forEach(n=>counts[n]=(counts[n]||0)+1);
+  });
+  const names = Object.keys(members);
+  document.getElementById('calLegend').innerHTML = names.length
+    ? names.map(n=>`<span class="legend-item"><span class="dot" style="background:${(members[n]||{}).color||'#999'}"></span>${esc(n)} <span class="cnt">${counts[n]||0}일</span></span>`).join('')
+    : `<span class="legend-item" style="color:var(--ink-soft)">아직 팀원이 없어요.</span>`;
+}
+
+/* ==================== CBT ==================== */
+function buildSubjectChips(){
+  const all = ["전체", ...SUBJECTS];
+  const mk = (containerId, getSel, setSel) => {
+    const el = document.getElementById(containerId);
+    el.innerHTML = all.map(s=>`<button class="chip${getSel()===s?' on':''}" data-s="${s}">${s}</button>`).join('');
+    el.querySelectorAll('.chip').forEach(b=>{
+      b.onclick = ()=>{ setSel(b.dataset.s); buildSubjectChips(); renderBank(); };
+    });
+  };
+  mk('quizSubjects', ()=>quizSubjectSel, v=>quizSubjectSel=v);
+  mk('bankFilter', ()=>bankFilterSel, v=>bankFilterSel=v);
+  const sel = document.getElementById('qSubject');
+  if(!sel.options.length) sel.innerHTML = SUBJECTS.map(s=>`<option>${s}</option>`).join('');
+}
+
+function renderBank(){
+  const list = bankFilterSel==="전체" ? questions : questions.filter(q=>q.subject===bankFilterSel);
+  document.getElementById('qCount').textContent = `(${questions.length}문제)`;
+  const el = document.getElementById('qList');
+  if(!list.length){ el.innerHTML = `<div class="empty-msg">해당 과목의 문제가 아직 없어요.</div>`; return; }
+  el.innerHTML = list.map(q=>`
+    <div class="q-item">
+      <div class="q-meta"><span class="badge">${esc(q.subject)}</span><span class="badge">출제: ${esc(q.author||'-')}</span></div>
+      <div class="q-text">${esc(q.text)}</div>
+      <ul class="q-choices">
+        ${q.choices.map((c,i)=>`<li class="${i===q.answer?'answer':''}"><span class="num">${CIRCLED[i]}</span><span>${esc(c)}</span></li>`).join('')}
+      </ul>
+      ${q.expl ? `<div class="q-expl">${esc(q.expl)}</div>` : ''}
+      <div class="q-foot"><button class="btn small danger" data-del="${q.id}">삭제</button></div>
+    </div>`).join('');
+  el.querySelectorAll('[data-del]').forEach(b=>{
+    b.onclick = async ()=>{
+      if(!confirm("이 문제를 삭제할까요?")) return;
+      const qs = await dbGet('questions') || [];
+      await dbSet('questions', qs.filter(q=>q.id!==b.dataset.del));
+    };
+  });
+}
+
+document.getElementById('addQBtn').onclick = ()=>{
+  if(!me){ openModal('profileModal'); return; }
+  ['qText','qc0','qc1','qc2','qc3','qExpl'].forEach(id=>document.getElementById(id).value='');
+  openModal('qModal');
+};
+
+document.getElementById('qSave').onclick = async ()=>{
+  const text = document.getElementById('qText').value.trim();
+  const choices = ['qc0','qc1','qc2','qc3'].map(id=>document.getElementById(id).value.trim());
+  if(!text || choices.some(c=>!c)){ toast("문제와 보기 4개를 모두 입력해 주세요."); return; }
+  const q = {
+    id: uid(),
+    subject: document.getElementById('qSubject').value,
+    text, choices,
+    answer: parseInt(document.getElementById('qAnswer').value, 10),
+    expl: document.getElementById('qExpl').value.trim(),
+    author: me.name
+  };
+  const qs = await dbGet('questions') || [];
+  qs.push(q);
+  await dbSet('questions', qs);
+  closeModal('qModal'); toast("문제가 추가됐어요!");
+};
+
+/* ---- 일괄 추가 ---- */
+function matchSubject(raw){
+  if(!raw) return SUBJECTS[0];
+  const n = raw.replace(/\s/g,'');
+  for(const s of SUBJECTS){
+    const sn = s.replace(/\s/g,'');
+    if(sn===n || sn.includes(n) || n.includes(sn)) return s;
+  }
+  if(/설계/.test(n)) return SUBJECTS[0];
+  if(/개발/.test(n)) return SUBJECTS[1];
+  if(/데이터|디비|DB|SQL/i.test(n)) return SUBJECTS[2];
+  if(/프로그래밍|언어/.test(n)) return SUBJECTS[3];
+  if(/시스템|구축관리|보안|네트워크/.test(n)) return SUBJECTS[4];
+  return SUBJECTS[0];
+}
+
+const CIRCLED_MAP = {"\u2460":1,"\u2461":2,"\u2462":3,"\u2463":4};
+
+function parseChoiceLine(line){
+  let m = line.match(/^\s*([1-4])[.)]\s*(.+)$/);
+  if(m) return {n: parseInt(m[1],10), text: m[2].trim()};
+  m = line.match(/^\s*([\u2460-\u2463])\s*(.+)$/);
+  if(m) return {n: CIRCLED_MAP[m[1]], text: m[2].trim()};
+  return null;
+}
+
+function parseBulk(raw){
+  const blocks = raw.split(/\n\s*-{3,}\s*\n?/).map(b=>b.trim()).filter(Boolean);
+  const results = [], errors = [];
+  blocks.forEach((block, bi)=>{
+    const lines = block.split('\n');
+    let subject = null, qLines = [], choices = [null,null,null,null];
+    let answer = null, explLines = [];
+    let mode = 'question';
+
+    for(const line of lines){
+      const t = line.trim();
+      if(!t) continue;
+      let m;
+      if((m = t.match(/^과목\s*[:：]\s*(.+)$/))){ subject = m[1].trim(); continue; }
+      if((m = t.match(/^정답\s*[:：]\s*(.+)$/))){
+        const a = m[1].trim();
+        answer = CIRCLED_MAP[a] || parseInt(a,10) || null;
+        mode = 'after'; continue;
+      }
+      if((m = t.match(/^해설\s*[:：]\s*(.*)$/))){ mode='expl'; if(m[1]) explLines.push(m[1]); continue; }
+      if(mode==='expl'){ explLines.push(t); continue; }
+
+      const ch = parseChoiceLine(t);
+      if(ch && ch.n>=1 && ch.n<=4){ choices[ch.n-1] = ch.text; mode='choices'; continue; }
+
+      if(mode==='question' || (mode!=='after' && !qLines.length)){
+        const qm = t.match(/^문제\s*[:：]\s*(.*)$/);
+        qLines.push(qm ? qm[1] : t);
+        mode = 'question';
+      } else if(mode==='question'){
+        qLines.push(t);
+      }
+    }
+
+    const missing = [];
+    if(!qLines.length) missing.push("문제");
+    choices.forEach((c,i)=>{ if(!c) missing.push(`보기${i+1}`); });
+    if(!answer || answer<1 || answer>4) missing.push("정답(1~4)");
+    if(missing.length){
+      errors.push(`${bi+1}번째 블록: ${missing.join(', ')} 누락`);
+    } else {
+      results.push({
+        id: uid(),
+        subject: matchSubject(subject),
+        text: qLines.join('\n'),
+        choices,
+        answer: answer-1,
+        expl: explLines.join('\n'),
+        author: me ? me.name : '-'
+      });
+    }
+  });
+  return {results, errors, total: blocks.length};
+}
+
+document.getElementById('bulkQBtn').onclick = ()=>{
+  if(!me){ openModal('profileModal'); return; }
+  bulkParsed = null;
+  document.getElementById('bulkPreview').innerHTML = '';
+  document.getElementById('bulkSave').disabled = true;
+  openModal('bulkModal');
+};
+
+document.getElementById('bulkCheck').onclick = ()=>{
+  const raw = document.getElementById('bulkInput').value;
+  if(!raw.trim()){ toast("내용을 붙여넣어 주세요."); return; }
+  const {results, errors, total} = parseBulk(raw);
+  bulkParsed = results;
+  const pv = document.getElementById('bulkPreview');
+  let html = `<div style="padding:10px 14px;border-radius:8px;background:${errors.length?'#FBF0EE':'#F0F8F3'};border:1px solid ${errors.length?'var(--red-pen)':'var(--green-ok)'}">`;
+  html += `<b>${total}개 블록 중 ${results.length}개 인식 완료</b>`;
+  if(results.length){
+    const bySubj = {};
+    results.forEach(q=>bySubj[q.subject]=(bySubj[q.subject]||0)+1);
+    html += `<div style="font-size:.75rem;color:var(--ink-soft);margin-top:4px">` +
+      Object.entries(bySubj).map(([s,c])=>`${s} ${c}개`).join(' · ') + `</div>`;
+  }
+  if(errors.length){
+    html += `<ul style="margin:6px 0 0 18px;color:var(--red-pen);font-size:.78rem">` +
+      errors.map(e=>`<li>${esc(e)}</li>`).join('') + `</ul>`;
+  }
+  html += `</div>`;
+  pv.innerHTML = html;
+  document.getElementById('bulkSave').disabled = results.length === 0;
+};
+
+document.getElementById('bulkSave').onclick = async ()=>{
+  if(!bulkParsed || !bulkParsed.length) return;
+  const qs = await dbGet('questions') || [];
+  qs.push(...bulkParsed);
+  await dbSet('questions', qs);
+  closeModal('bulkModal');
+  document.getElementById('bulkInput').value = '';
+  toast(`${bulkParsed.length}개 문제가 등록됐어요!`);
+  bulkParsed = null;
+};
+
+/* ==================== 풀이 모드 ==================== */
+document.getElementById('startQuiz').onclick = ()=>{
+  let pool = quizSubjectSel==="전체" ? [...questions] : questions.filter(q=>q.subject===quizSubjectSel);
+  if(!pool.length){ toast("풀 문제가 없어요."); return; }
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  quiz = {list: pool, idx: 0, score: 0, picked: null};
+  document.getElementById('quizCard').style.display = 'block';
+  renderQuiz();
+  document.getElementById('quizCard').scrollIntoView({behavior:'smooth'});
+};
+
+function renderQuiz(){
+  const el = document.getElementById('omrSheet');
+  if(quiz.idx >= quiz.list.length){
+    const pct = Math.round(quiz.score / quiz.list.length * 100);
+    el.innerHTML = `<div class="omr-result">
+      <div class="mono" style="font-size:.8rem;color:var(--ink-soft);margin-bottom:6px">채점 결과</div>
+      <div class="omr-score" style="color:${pct>=60?'var(--green-ok)':'var(--red-pen)'}">${quiz.score}<span class="total"> / ${quiz.list.length}</span></div>
+      <p style="font-size:.9rem;margin:8px 0 20px">${pct}점</p>
+      <button class="btn primary" onclick="document.getElementById('startQuiz').click()">다시 풀기</button>
+    </div>`;
+    return;
+  }
+  const q = quiz.list[quiz.idx];
+  const answered = quiz.picked !== null;
+  el.innerHTML = `
+    <div class="omr-progress"><span>${quiz.idx+1} / ${quiz.list.length}</span><span>${esc(q.subject)}</span></div>
+    <div class="omr-q">${esc(q.text)}</div>
+    ${q.choices.map((c,i)=>{
+      let cls = "omr-opt";
+      if(answered){
+        if(i===q.answer) cls += " correct";
+        else if(i===quiz.picked) cls += " wrong";
+      }
+      return `<button class="${cls}" data-i="${i}" ${answered?'disabled':''}><span class="bubble">${CIRCLED[i]}</span><span>${esc(c)}</span></button>`;
+    }).join('')}
+    ${answered && q.expl ? `<div class="q-expl" style="margin-top:12px">${esc(q.expl)}</div>` : ''}
+    ${answered ? `<div style="text-align:right;margin-top:14px"><button class="btn primary" id="nextQ">${quiz.idx+1===quiz.list.length?'결과 보기':'다음 문제 →'}</button></div>` : ''}
+  `;
+  if(!answered){
+    el.querySelectorAll('.omr-opt').forEach(b=>{
+      b.onclick = ()=>{
+        quiz.picked = parseInt(b.dataset.i,10);
+        if(quiz.picked === q.answer) quiz.score++;
+        renderQuiz();
+      };
+    });
+  } else {
+    document.getElementById('nextQ').onclick = ()=>{ quiz.idx++; quiz.picked=null; renderQuiz(); };
+  }
+}
+
+/* ==================== 메모 ==================== */
+document.getElementById('memoAdd').onclick = async ()=>{
+  if(!me){ openModal('profileModal'); return; }
+  const text = document.getElementById('memoInput').value.trim();
+  if(!text){ toast("내용을 입력해 주세요."); return; }
+  const ms = await dbGet('memos') || [];
+  ms.unshift({id: uid(), author: me.name, text, ts: Date.now(), solved: false, replies: []});
+  await dbSet('memos', ms);
+  document.getElementById('memoInput').value = '';
+  toast("메모를 남겼어요!");
+};
+
+function renderMemos(){
+  const el = document.getElementById('memoList');
+  if(!memos.length){ el.innerHTML = `<div class="empty-msg">아직 메모가 없어요.</div>`; return; }
+  el.innerHTML = memos.map(m=>{
+    const c = (members[m.author]&&members[m.author].color) || "#999";
+    return `<div class="memo-item${m.solved?' solved':''}">
+      <div class="memo-head">
+        <span class="memo-author"><span class="dot" style="background:${c}"></span>${esc(m.author)}</span>
+        <span class="memo-time">${fmtTime(m.ts)}</span>
+        ${m.solved?'<span class="solved-badge">해결됨</span>':''}
+        <span class="memo-actions">
+          <button class="btn small" data-solve="${m.id}">${m.solved?'다시 열기':'해결!'}</button>
+          <button class="btn small danger" data-mdel="${m.id}">삭제</button>
+        </span>
+      </div>
+      <div class="memo-body">${esc(m.text)}</div>
+      <div class="replies">
+        ${(m.replies||[]).map(r=>{
+          const rc = (members[r.author]&&members[r.author].color) || "#999";
+          return `<div class="reply"><span class="who"><span class="dot" style="background:${rc};width:8px;height:8px"></span>${esc(r.author)}</span><span>${esc(r.text)}</span><span class="memo-time">${fmtTime(r.ts)}</span></div>`;
+        }).join('')}
+        <div class="reply-form">
+          <input type="text" placeholder="답글 달기..." data-rin="${m.id}" maxlength="300">
+          <button class="btn small" data-rbtn="${m.id}">등록</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('[data-solve]').forEach(b=>{
+    b.onclick = async ()=>{
+      const ms = await dbGet('memos') || [];
+      const m = ms.find(x=>x.id===b.dataset.solve);
+      if(m){ m.solved = !m.solved; await dbSet('memos', ms); }
+    };
+  });
+  el.querySelectorAll('[data-mdel]').forEach(b=>{
+    b.onclick = async ()=>{
+      if(!confirm("이 메모를 삭제할까요?")) return;
+      const ms = await dbGet('memos') || [];
+      await dbSet('memos', ms.filter(x=>x.id!==b.dataset.mdel));
+    };
+  });
+  el.querySelectorAll('[data-rbtn]').forEach(b=>{
+    const submit = async ()=>{
+      if(!me){ openModal('profileModal'); return; }
+      const input = el.querySelector(`[data-rin="${b.dataset.rbtn}"]`);
+      const text = input.value.trim();
+      if(!text) return;
+      const ms = await dbGet('memos') || [];
+      const m = ms.find(x=>x.id===b.dataset.rbtn);
+      if(m){
+        (m.replies = m.replies||[]).push({author: me.name, text, ts: Date.now()});
+        await dbSet('memos', ms);
+        input.value = '';
+      }
+    };
+    b.onclick = submit;
+    el.querySelector(`[data-rin="${b.dataset.rbtn}"]`).onkeydown = e=>{ if(e.key==='Enter') submit(); };
+  });
+}
+
+/* ==================== 탭 ==================== */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x===t));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id===`panel-${t.dataset.tab}`));
+  };
+});
+
+/* ==================== 모달 배경 클릭 ==================== */
+document.querySelectorAll('.modal-bg').forEach(m=>{
+  m.addEventListener('click', e=>{
+    if(e.target===m && !(m.id==='profileModal' && !me)) m.classList.remove('show');
+  });
+});
+
+init();
+</script>
+</body>
+</html>
