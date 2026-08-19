@@ -894,7 +894,7 @@ document.getElementById('startQuiz').onclick = ()=>{
   let pool = quizSubjectSel==="전체" ? [...questions] : questions.filter(q=>q.subject===quizSubjectSel);
   if(!pool.length){ toast("풀 문제가 없어요."); return; }
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-  quiz = {list: pool, idx: 0, score: 0, picked: null};
+  quiz = {list: pool, idx: 0, score: 0, picked: null, showExpl: false};
   document.getElementById('quizCard').style.display = 'block';
   renderQuiz();
   document.getElementById('quizCard').scrollIntoView({behavior:'smooth'});
@@ -925,19 +925,27 @@ function renderQuiz(){
       }
       return `<button class="${cls}" data-i="${i}" ${answered?'disabled':''}><span class="bubble">${CIRCLED[i]}</span><span>${esc(c)}</span></button>`;
     }).join('')}
-    ${answered && q.expl ? `<div class="q-expl" style="margin-top:12px">${esc(q.expl)}</div>` : ''}
+    ${answered && q.expl ? (
+      quiz.showExpl
+        ? `<div class="q-expl" style="margin-top:12px">${esc(q.expl)}</div>`
+        : `<div style="margin-top:12px"><button class="btn small" id="showExplBtn">해설 보기</button></div>`
+    ) : ''}
     ${answered ? `<div style="text-align:right;margin-top:14px"><button class="btn primary" id="nextQ">${quiz.idx+1===quiz.list.length?'결과 보기':'다음 문제 →'}</button></div>` : ''}
   `;
   if(!answered){
     el.querySelectorAll('.omr-opt').forEach(b=>{
       b.onclick = ()=>{
         quiz.picked = parseInt(b.dataset.i,10);
+        quiz.showExpl = false;
         if(quiz.picked === q.answer) quiz.score++;
         renderQuiz();
       };
     });
   } else {
-    document.getElementById('nextQ').onclick = ()=>{ quiz.idx++; quiz.picked=null; renderQuiz(); };
+    if(q.expl && !quiz.showExpl){
+      document.getElementById('showExplBtn').onclick = ()=>{ quiz.showExpl = true; renderQuiz(); };
+    }
+    document.getElementById('nextQ').onclick = ()=>{ quiz.idx++; quiz.picked=null; quiz.showExpl=false; renderQuiz(); };
   }
 }
 
