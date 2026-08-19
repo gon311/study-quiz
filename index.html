@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>정보처리기사 스터디</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
 <style>
 :root{
   --paper:#FBFCF9;
@@ -448,7 +449,6 @@ label{font-size:.78rem;font-weight:600;color:var(--ink-soft);display:block;margi
 
 <script>
 /* ==================== Firebase 초기화 ==================== */
-// 여기에 Firebase 설정을 넣습니다 (아래에서 제공)
 const firebaseConfig = {
   apiKey: "AIzaSyCORUJmWtu0J793VL9Up0Pf2mGO77P2u-o",
   authDomain: "study-quiz-7558e.firebaseapp.com",
@@ -462,11 +462,14 @@ const firebaseConfig = {
 let db = null;
 let isFirebaseReady = false;
 
-firebase.initializeApp(firebaseConfig);
-db = firebase.database();
-isFirebaseReady = true;
-
-console.log('Firebase 연결됨');
+try{
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  isFirebaseReady = true;
+  console.log('Firebase 연결됨');
+}catch(e){
+  console.error('Firebase 연결 실패:', e);
+}
 
 /* ==================== 상수 & 상태 ==================== */
 const SUBJECTS = ["소프트웨어 설계","소프트웨어 개발","데이터베이스 구축","프로그래밍 언어 활용","정보시스템 구축관리"];
