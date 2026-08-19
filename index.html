@@ -295,9 +295,10 @@ label{font-size:.78rem;font-weight:600;color:var(--ink-soft);display:block;margi
   <section class="panel" id="panel-cbt">
     <div class="card">
       <h2>문제 풀기</h2>
-      <p class="desc">과목을 선택하고 OMR 마킹하듯 풀어보세요. 바로 채점됩니다.</p>
+      <p class="desc">과목과 문제 수를 선택하고 OMR 마킹하듯 풀어보세요. 바로 채점됩니다.</p>
       <div class="filter-bar" id="quizSubjects"></div>
-      <button class="btn primary" id="startQuiz">풀이 시작</button>
+      <div class="filter-bar" id="quizCountBar" style="margin-top:8px"></div>
+      <button class="btn primary" id="startQuiz" style="margin-top:10px">풀이 시작</button>
     </div>
 
     <div class="card" id="quizCard" style="display:none">
@@ -484,6 +485,7 @@ let memos = [];
 let settings = {};
 let calYear, calMonth;
 let quizSubjectSel = "전체";
+let quizCountSel = 10;
 let bankFilterSel = "전체";
 let quiz = null;
 let bulkParsed = null;
@@ -714,8 +716,29 @@ function buildSubjectChips(){
   };
   mk('quizSubjects', ()=>quizSubjectSel, v=>quizSubjectSel=v);
   mk('bankFilter', ()=>bankFilterSel, v=>bankFilterSel=v);
+  renderQuizCountChips();
   const sel = document.getElementById('qSubject');
   if(!sel.options.length) sel.innerHTML = SUBJECTS.map(s=>`<option>${s}</option>`).join('');
+}
+
+function renderQuizCountChips(){
+  const el = document.getElementById('quizCountBar');
+  const opts = [
+    {v:10, label:'10문제'},
+    {v:20, label:'20문제'},
+    {v:30, label:'30문제'},
+    {v:'all', label:'전체'}
+  ];
+  el.innerHTML = opts.map(o=>
+    `<button class="chip${quizCountSel===o.v?' on':''}" data-v="${o.v}">${o.label}</button>`
+  ).join('');
+  el.querySelectorAll('.chip').forEach(b=>{
+    b.onclick = ()=>{
+      const v = b.dataset.v;
+      quizCountSel = v === 'all' ? 'all' : parseInt(v, 10);
+      renderQuizCountChips();
+    };
+  });
 }
 
 function renderBank(){
@@ -894,6 +917,9 @@ document.getElementById('startQuiz').onclick = ()=>{
   let pool = quizSubjectSel==="전체" ? [...questions] : questions.filter(q=>q.subject===quizSubjectSel);
   if(!pool.length){ toast("풀 문제가 없어요."); return; }
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  if(quizCountSel !== 'all' && pool.length > quizCountSel){
+    pool = pool.slice(0, quizCountSel);
+  }
   quiz = {list: pool, idx: 0, score: 0, picked: null, showExpl: false};
   document.getElementById('quizCard').style.display = 'block';
   renderQuiz();
