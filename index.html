@@ -916,8 +916,22 @@ function parseBulk(raw){
     let subject = null, qLines = [], choices = [null,null,null,null];
     let answer = null, explLines = [];
     let mode = 'question';
+    let inFence = false;  // ``` 코드 펜스 안에서는 들여쓰기를 보존해야 하므로 trim하지 않음
 
     for(const line of lines){
+      if(line.trim() === '```'){
+        inFence = !inFence;
+        if(mode==='expl'){ explLines.push('```'); }
+        else { qLines.push('```'); mode='question'; }
+        continue;
+      }
+      if(inFence){
+        // 코드 줄: 들여쓰기를 유지하기 위해 trim하지 않고 그대로 보존
+        if(mode==='expl'){ explLines.push(line); }
+        else { qLines.push(line); mode='question'; }
+        continue;
+      }
+
       const t = line.trim();
       if(!t) continue;
       let m;
