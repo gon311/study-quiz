@@ -157,6 +157,16 @@ label{font-size:.78rem;font-weight:600;color:var(--ink-soft);display:block;margi
   font-size:.82rem;color:var(--ink-soft);background:var(--omr-mint);
   border-radius:6px;padding:8px 12px;margin-top:8px;white-space:pre-wrap;
 }
+.code-line{
+  font-family:'IBM Plex Mono',monospace;display:block;font-size:.78rem;
+  background:rgba(28,43,51,.06);padding:1px 6px;border-radius:3px;
+  margin:1px 0;color:var(--ink);
+}
+.code-block{
+  font-family:'IBM Plex Mono',monospace;font-size:.8rem;line-height:1.55;
+  background:#1C2B33;color:#E8F2ED;border-radius:8px;padding:12px 14px;
+  margin:8px 0;overflow-x:auto;white-space:pre;
+}
 .q-foot{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
 .pager{
   display:flex;align-items:center;justify-content:center;gap:14px;
@@ -524,6 +534,29 @@ function toast(msg){
   clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// 해설 안에 섞인 소스코드 줄(#include, printf, ❶❷❸ 코드 주석 등)을 자동 감지해서
+// 모노스페이스 스타일로 표시 - 코드 가독성을 높이기 위함
+const CODE_LINE_RE = /^(#include|#define|import\s|public\s+(class|static)|private\s|static\s+(void|int)|int\s+main|void\s+\w+\s*\(|for\s*\(|while\s*\(|if\s*\(|else\b|return\s|printf\s*\(|scanf\s*\(|System\.(out|err)|char\s*\*?\s*\w|str(cpy|cat|len|cmp)\s*\(|\{|\}|❶|❷|❸|❹|❺|❻|❼|❽|❾|❿|SELECT\s|FROM\s|WHERE\s|CREATE\s+TABLE|INSERT\s+INTO|UPDATE\s+\w|DELETE\s+FROM|GRANT\s|REVOKE\s|DROP\s|ALTER\s+TABLE|PRIMARY\s+KEY|FOREIGN\s+KEY|GROUP\s+BY|ORDER\s+BY|VALUES\s*\(|def\s+\w|elif\s|print\s*\()/i;
+
+// ```로 감싼 코드 펜스는 <pre class="code-block">로, 그 외 텍스트는 줄 단위로
+// CODE_LINE_RE 검사해서 코드처럼 보이는 줄만 모노스페이스 처리
+function formatExpl(text){
+  if(!text) return '';
+  const parts = text.split(/```/);
+  return parts.map((part, idx)=>{
+    if(idx % 2 === 1){
+      // 펜스 안쪽: 통째로 코드블록
+      return `<pre class="code-block">${esc(part.trim())}</pre>`;
+    }
+    return part.split('\n').map(line=>{
+      const t = line.trim();
+      if(!t) return '';
+      const looksLikeCode = CODE_LINE_RE.test(t) || (/[;{}]\s*$/.test(t) && /[=()<>]/.test(t));
+      return looksLikeCode ? `<span class="code-line">${esc(line)}</span>` : esc(line);
+    }).join('\n');
+  }).join('');
+}
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function fmtTime(ts){
   const d = new Date(ts);
@@ -766,11 +799,11 @@ function renderBank(){
   const itemsHtml = pageList.map(q=>`
     <div class="q-item">
       <div class="q-meta"><span class="badge">${esc(q.subject)}</span><span class="badge">출제: ${esc(q.author||'-')}</span></div>
-      <div class="q-text">${esc(q.text)}</div>
+      <div class="q-text">${formatExpl(q.text)}</div>
       <ul class="q-choices">
         ${q.choices.map((c,i)=>`<li class="${i===q.answer?'answer':''}"><span class="num">${CIRCLED[i]}</span><span>${esc(c)}</span></li>`).join('')}
       </ul>
-      ${q.expl ? `<div class="q-expl">${esc(q.expl)}</div>` : ''}
+      ${q.expl ? `<div class="q-expl">${formatExpl(q.expl)}</div>` : ""}
       <div class="q-foot"><button class="btn small danger" data-del="${q.id}">삭제</button></div>
     </div>`).join('');
 
@@ -974,7 +1007,7 @@ function renderQuiz(){
   const answered = quiz.picked !== null;
   el.innerHTML = `
     <div class="omr-progress"><span>${quiz.idx+1} / ${quiz.list.length}</span><span>${esc(q.subject)}</span></div>
-    <div class="omr-q">${esc(q.text)}</div>
+    <div class="omr-q">${formatExpl(q.text)}</div>
     ${q.choices.map((c,i)=>{
       let cls = "omr-opt";
       if(answered){
@@ -985,7 +1018,7 @@ function renderQuiz(){
     }).join('')}
     ${answered && q.expl ? (
       quiz.showExpl
-        ? `<div class="q-expl" style="margin-top:12px">${esc(q.expl)}</div>`
+        ? `<div class="q-expl" style="margin-top:12px">${formatExpl(q.expl)}</div>`
         : `<div style="margin-top:12px"><button class="btn small" id="showExplBtn">해설 보기</button></div>`
     ) : ''}
     ${answered ? `<div style="text-align:right;margin-top:14px"><button class="btn primary" id="nextQ">${quiz.idx+1===quiz.list.length?'결과 보기':'다음 문제 →'}</button></div>` : ''}
