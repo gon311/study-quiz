@@ -7,6 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 
 <style>
 :root{
@@ -167,6 +169,8 @@ label{font-size:.78rem;font-weight:600;color:var(--ink-soft);display:block;margi
   background:#1C2B33;color:#E8F2ED;border-radius:8px;padding:12px 14px;
   margin:8px 0;overflow-x:auto;white-space:pre;
 }
+.katex-display{margin:6px 0 !important}
+.katex{font-size:1em}
 .q-foot{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
 .pager{
   display:flex;align-items:center;justify-content:center;gap:14px;
@@ -539,12 +543,35 @@ function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;
 // 모노스페이스 스타일로 표시 - 코드 가독성을 높이기 위함
 const CODE_LINE_RE = /^(#include|#define|import\s|public\s+(class|static)|private\s|static\s+(void|int)|int\s+main|void\s+\w+\s*\(|for\s*\(|while\s*\(|if\s*\(|else\b|return\s|printf\s*\(|scanf\s*\(|System\.(out|err)|char\s*\*?\s*\w|str(cpy|cat|len|cmp)\s*\(|\{|\}|❶|❷|❸|❹|❺|❻|❼|❽|❾|❿|SELECT\s|FROM\s|WHERE\s|CREATE\s+TABLE|INSERT\s+INTO|UPDATE\s+\w|DELETE\s+FROM|GRANT\s|REVOKE\s|DROP\s|ALTER\s+TABLE|PRIMARY\s+KEY|FOREIGN\s+KEY|GROUP\s+BY|ORDER\s+BY|VALUES\s*\(|def\s+\w|elif\s|print\s*\()/i;
 
-// ```로 감싼 코드 펜스는 <pre class="code-block">로, 그 외 텍스트는 줄 단위로
-// CODE_LINE_RE 검사해서 코드처럼 보이는 줄만 모노스페이스 처리
+// $...$ (인라인) / $$...$$ (블록) 수식을 KaTeX로 렌더링.
+// 렌더링된 조각은 나중에 원본 자리에 다시 끼워 넣기 위해 센티널 토큰으로 치환해둔다.
+function extractMath(text){
+  const store = [];
+  const put = (html)=>{ store.push(html); return `\u0003${store.length-1}\u0003`; };
+  if(typeof katex === 'undefined') return {text, store};
+  // 블록 수식 $$...$$ 먼저 처리
+  text = text.replace(/\$\$([^$]+)\$\$/g, (m, formula)=>{
+    try{ return put(katex.renderToString(formula.trim(), {throwOnError:false, displayMode:true})); }
+    catch(e){ return m; }
+  });
+  // 인라인 수식 $...$
+  text = text.replace(/\$([^$\n]+)\$/g, (m, formula)=>{
+    try{ return put(katex.renderToString(formula.trim(), {throwOnError:false})); }
+    catch(e){ return m; }
+  });
+  return {text, store};
+}
+function restoreMath(html, store){
+  return html.replace(/\u0003(\d+)\u0003/g, (m, i)=> store[Number(i)] ?? m);
+}
+
+// ```로 감싼 코드 펜스는 <pre class="code-block">로, $...$ 수식은 KaTeX로,
+// 그 외 텍스트는 줄 단위로 CODE_LINE_RE 검사해서 코드처럼 보이는 줄만 모노스페이스 처리
 function formatExpl(text){
   if(!text) return '';
-  const parts = text.split(/```/);
-  return parts.map((part, idx)=>{
+  const {text: withMath, store} = extractMath(text);
+  const parts = withMath.split(/```/);
+  const html = parts.map((part, idx)=>{
     if(idx % 2 === 1){
       // 펜스 안쪽: 통째로 코드블록
       return `<pre class="code-block">${esc(part.trim())}</pre>`;
@@ -556,6 +583,7 @@ function formatExpl(text){
       return looksLikeCode ? `<span class="code-line">${esc(line)}</span>` : esc(line);
     }).join('\n');
   }).join('');
+  return restoreMath(html, store);
 }
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function fmtTime(ts){
